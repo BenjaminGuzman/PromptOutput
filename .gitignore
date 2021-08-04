@@ -1,3 +1,11 @@
+# IDE config
+**/.idea/
+
+# Compiled files
+**/target/
+**/dist/
+**/build/
+
 # Compiled class file
 *.class
 

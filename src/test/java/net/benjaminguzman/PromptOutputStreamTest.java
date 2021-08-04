@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -159,7 +160,7 @@ class PromptOutputStreamTest {
 			// writing to PipedOutputStream from different threads may not be a good idea, but let's 🤞
 			// https://techtavern.wordpress.com/2008/07/16/whats-this-ioexception-write-end-dead/
 			writerExecutorService.submit(() -> strings.forEach(System.out::println));
-		/*writerExecutorService.submit(() -> {
+		writerExecutorService.submit(() -> {
 			try {
 				boolean timed_out = writerExecutorService.awaitTermination(15, TimeUnit.SECONDS);
 				if (timed_out)
@@ -174,7 +175,7 @@ class PromptOutputStreamTest {
 					e.printStackTrace();
 				}
 			}
-		});*/
+		});
 		writerExecutorService.shutdown();
 
 		// initialize Input

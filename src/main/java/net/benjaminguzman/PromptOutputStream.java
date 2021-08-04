@@ -93,8 +93,14 @@ public class PromptOutputStream extends OutputStream {
 	}
 
 	/**
+	 * Set the prompt to be used
+	 * <p>
+	 * This operation does not write to output
+	 * <p>
+	 * This method has the same problem described in {@link #setStatusIcon(String)} method documentation
+	 *
 	 * @param prompt the prompt to be used
-	 * @return the same object (to allow fluent pattern)
+	 * @return the same object (so you can use fluent pattern)
 	 */
 	public PromptOutputStream setPrompt(@NotNull String prompt) {
 		byte[] promptBytes = prompt.getBytes(StandardCharsets.UTF_8);
@@ -126,9 +132,29 @@ public class PromptOutputStream extends OutputStream {
 
 	/**
 	 * Set the "icon" (emoji preferably) to show alongside the prompt.
+	 * If the icon does not end with a space, a space is added
+	 *
+	 * This operation does not write to output
+	 *
+	 * Even though, this is synchronized, that doesn't mean you won't get unexpected output.
+	 *
+	 * Let's say you have 2 threads. One calling {@link #setStatusIcon(String)} and then {@link #write(byte[])}
+	 * (or any write method via println). Suppose the other thread does the same. In such case, the following
+	 * behaviour may result:
+	 *
+	 * Thread 1: changes the status icon to 💥
+	 *
+	 * Thread 2: changes the status icon to 💀
+	 *
+	 * Thread 1: any write method is invoked. Then it prints the icon 💀 (wrong)
+	 *
+	 * Thread 2: any write method is invoked. Then it prints the icon 💀 (good)
+	 *
+	 * Therefore, you'll need to add extra synchronization or use another method like {@link #printPrompt(String)}
 	 *
 	 * @param icon the emoji to show
-	 * @return the same object (to allow fluent pattern)
+	 * @return the same object (so you can use fluent pattern)
+	 * @see #printPrompt(String)
 	 */
 	public PromptOutputStream setStatusIcon(@NotNull String icon) {
 		if (!icon.endsWith(" "))
@@ -144,13 +170,40 @@ public class PromptOutputStream extends OutputStream {
 	}
 
 	/**
+	 * Changes the status icon and prints the prompt.
+	 * <p>
+	 * This solves the synchronization problem described in {@link #setStatusIcon(String)} method documentation
+	 * <p>
+	 * This method has very similar behaviour to {@link #printPrompt()}
+	 *
+	 * @return the same object (so you can use fluent pattern)
+	 * @see #printPrompt()
+	 */
+	public PromptOutputStream printPrompt(@NotNull String icon) {
+		try {
+			synchronized (out) {
+				this.setStatusIcon(icon);
+				out.write('\r'); // start writing at the beginning
+				out.write(statusIcon);
+				out.write(prompt);
+				out.flush();
+			}
+		} catch (IOException ignored) {
+		} // just ignore the exception 🤞 it is nothing terribly bad
+
+		return this;
+	}
+
+	/**
 	 * Prints the prompt.
 	 * <p>
 	 * This will place the cursor at the beginning of the line and write the prompt (and status),
 	 * so be careful as it may overwrite some bytes.
 	 * Preferably call this after a line feed (\n) so that doesn't happen
+	 *
+	 * @return the same object (so you can use fluent pattern)
 	 */
-	public void printPrompt() {
+	public PromptOutputStream printPrompt() {
 		try {
 			synchronized (out) {
 				out.write('\r'); // start writing at the beginning
@@ -160,6 +213,8 @@ public class PromptOutputStream extends OutputStream {
 			}
 		} catch (IOException ignored) {
 		} // just ignore the exception 🤞 it is nothing terribly bad
+
+		return this;
 	}
 
 	@Override

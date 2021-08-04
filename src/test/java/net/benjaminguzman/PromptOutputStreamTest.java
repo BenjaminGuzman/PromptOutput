@@ -1,16 +1,12 @@
 package net.benjaminguzman;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 
 import java.io.*;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -50,7 +46,7 @@ class PromptOutputStreamTest {
 
 	@Test()
 	@DisplayName("Prompt should be written after new line")
-	void simple() throws IOException {
+	void singleThread() throws IOException {
 		// initialize Output
 		PipedOutputStream outputStream = new PipedOutputStream();
 		PromptOutputStream promptOutputStream = new PromptOutputStream(outputStream);
@@ -98,6 +94,47 @@ class PromptOutputStreamTest {
 	}
 
 	@Test()
+	@DisplayName("Prompt should be re-written and should contain the status icon")
+	void rewritePrompt() throws IOException {
+		// initialize Output
+		PipedOutputStream outputStream = new PipedOutputStream();
+		PromptOutputStream promptOutputStream = new PromptOutputStream(outputStream);
+
+		List<String> statusIcons = List.of("💀", "☠", "⏳", "💥", "🔥", "♥", "🇲🇽", "🇮🇱", "🇨🇱", "😍",
+			"🥰");
+
+		Thread writerThread = new Thread(() -> {
+			for (int i = 0; i < statusIcons.size(); ++i)
+				promptOutputStream.printPrompt(i + " " + statusIcons.get(i));
+
+			try {
+				outputStream.flush();
+				outputStream.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		});
+		writerThread.start();
+
+		// initialize Input
+		BufferedReader reader = new BufferedReader(new InputStreamReader(new PipedInputStream(outputStream)));
+
+		String line;
+		while (reader.readLine() != null) { // skip first \r written
+			// first line should contain the index of the prompt and status icon
+			line = reader.readLine();
+			String[] splittedLine = line.split(" ", 2);
+			int idx = Integer.parseInt(splittedLine[0]);
+			// originalOut.println(line); // uncomment if you don't have clear what is this doing
+
+			String expectedPrompt = statusIcons.get(idx) + " " + PromptOutputStream.DEFAULT_PROMPT;
+			String actualPrompt = splittedLine[1];
+
+			assertEquals(expectedPrompt, actualPrompt);
+		}
+	}
+
+	@Test()
 	@DisplayName("Testing with multiple threads")
 	void multiThread() throws IOException {
 		// initialize Output
@@ -119,8 +156,10 @@ class PromptOutputStreamTest {
 		int N_THREADS = 5;
 		ExecutorService writerExecutorService = Executors.newFixedThreadPool(N_THREADS);
 		for (int i = 0; i < N_THREADS; ++i)
+			// writing to PipedOutputStream from different threads may not be a good idea, but let's 🤞
+			// https://techtavern.wordpress.com/2008/07/16/whats-this-ioexception-write-end-dead/
 			writerExecutorService.submit(() -> strings.forEach(System.out::println));
-		writerExecutorService.submit(() -> {
+		/*writerExecutorService.submit(() -> {
 			try {
 				boolean timed_out = writerExecutorService.awaitTermination(15, TimeUnit.SECONDS);
 				if (timed_out)
@@ -135,7 +174,7 @@ class PromptOutputStreamTest {
 					e.printStackTrace();
 				}
 			}
-		});
+		});*/
 		writerExecutorService.shutdown();
 
 		// initialize Input
@@ -181,7 +220,7 @@ class PromptOutputStreamTest {
 		PipedOutputStream outputStream = new PipedOutputStream();
 
 		// generate some random strings
-		int N_TEST_STRINGS = 1_000;
+		int N_TEST_STRINGS = 10_000;
 		List<String> strings = new Random()
 			.ints(5, 1_000) // length of the generated string
 			.limit(N_TEST_STRINGS)
@@ -191,25 +230,26 @@ class PromptOutputStreamTest {
 
 		//// Test without custom out
 		// change default stdout
-		System.setErr(new PrintStream(outputStream, true));
+		System.setOut(new PrintStream(outputStream, true));
 
-		start_time = System.nanoTime();
-		strings.forEach(System.err::println);
-		end_time = System.nanoTime();
+		start_time = System.currentTimeMillis();
+		strings.forEach(System.out::println);
+		end_time = System.currentTimeMillis();
 		time1 = end_time - start_time;
-		System.out.println("Without PromptOutputStream and " + N_TEST_STRINGS + " strings, execution took: " + time1 + "ns");
+		originalOut.println("Without PromptOutputStream and " + N_TEST_STRINGS + " strings, execution took: " + time1 + "ms");
 
 		//// Test with custom out
 		// change default stdout
-		System.setErr(new PrintStream(new PromptOutputStream(outputStream), true));
+		System.setOut(new PrintStream(new PromptOutputStream(outputStream), true));
 
-		start_time = System.nanoTime();
-		strings.forEach(System.err::println);
-		end_time = System.nanoTime();
+		start_time = System.currentTimeMillis();
+		strings.forEach(System.out::println);
+		end_time = System.currentTimeMillis();
 		time2 = (end_time - start_time);
-		System.out.println("With PromptOutputStream and " + N_TEST_STRINGS + " strings, execution took: " + time2 + "ns");
+		originalOut.println("With PromptOutputStream and " + N_TEST_STRINGS + " strings, execution took: " + time2 + "ms");
 
-		System.out.println("Difference is: " + (time2 - time1) + "ns");
+		originalOut.println("Difference is: " + (time2 - time1) + "ms = " + Math.abs(time2 - time1) / 1_000f + "s");
+		Assertions.assertTrue(Math.abs(time2 - time1) / 1_000f <= 2); // time difference should be very low
 	}
 
 	@Test()
@@ -233,22 +273,23 @@ class PromptOutputStreamTest {
 			.collect(Collectors.toList());
 
 		//// Test without custom out
-		start_time = System.nanoTime();
+		start_time = System.currentTimeMillis();
 		strings.forEach(System.out::println);
-		end_time = System.nanoTime();
+		end_time = System.currentTimeMillis();
 		time1 = end_time - start_time;
-		originalOut.println("Without PromptOutputStream and " + N_TEST_STRINGS + " strings, execution took: " + time1 + "ns");
+		originalOut.println("Without PromptOutputStream and " + N_TEST_STRINGS + " strings, execution took: " + time1 + "ms");
 
 		//// Test with custom out
 		// change default stdout
 		System.setErr(new PrintStream(new PromptOutputStream(System.out), true));
 
-		start_time = System.nanoTime();
+		start_time = System.currentTimeMillis();
 		strings.forEach(System.out::println);
-		end_time = System.nanoTime();
+		end_time = System.currentTimeMillis();
 		time2 = (end_time - start_time);
-		originalOut.println("With PromptOutputStream and " + N_TEST_STRINGS + " strings, execution took: " + time2 + "ns");
+		originalOut.println("With PromptOutputStream and " + N_TEST_STRINGS + " strings, execution took: " + time2 + "ms");
 
-		originalOut.println("Difference is: " + (time2 - time1) + "ns");
+		originalOut.println("Difference is: " + (time2 - time1) + "ms = " + Math.abs(time2 - time1) / 1_000f + "s");
+		Assertions.assertTrue(Math.abs(time2 - time1) / 1_000f <= 2); // time difference should be very low
 	}
 }

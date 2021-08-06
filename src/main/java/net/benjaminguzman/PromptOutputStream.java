@@ -75,7 +75,7 @@ public class PromptOutputStream extends OutputStream {
 	 * Creates a new object with no status icon
 	 *
 	 * @param out    actual output stream where data will be written
-	 * @param prompt prompt to be shown. It is recommended to be a short string. Examples: "$ ", "> ", ">>> "...
+	 * @param prompt prompt to be shown. It is recommended to be a short string. Examples: "$ ", "# "...
 	 */
 	public PromptOutputStream(@NotNull OutputStream out, @NotNull String prompt) {
 		this.out = out;

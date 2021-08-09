@@ -1,6 +1,27 @@
+/*
+ * Copyright (c) 2021. Benjamín Antonio Velasco Guzmán
+ * Author: Benjamín Antonio Velasco Guzmán <bg@benjaminguzman.dev>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package net.benjaminguzman;
 
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 
 import java.io.*;
 import java.util.List;
@@ -10,8 +31,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.*;
 
 class PromptOutputStreamTest {
 	PrintStream originalOut;
@@ -99,7 +119,7 @@ class PromptOutputStreamTest {
 	void rewritePrompt() throws IOException {
 		// initialize Output
 		PipedOutputStream outputStream = new PipedOutputStream();
-		PromptOutputStream promptOutputStream = new PromptOutputStream(outputStream);
+		PromptOutputStream promptOutputStream = new PromptOutputStream(outputStream).setPrompt(">>> ");
 
 		List<String> statusIcons = List.of("💀", "☠", "⏳", "💥", "🔥", "♥", "🇲🇽", "🇮🇱", "🇨🇱", "😍",
 			"🥰");
@@ -128,7 +148,7 @@ class PromptOutputStreamTest {
 			int idx = Integer.parseInt(splittedLine[0]);
 			// originalOut.println(line); // uncomment if you don't have clear what is this doing
 
-			String expectedPrompt = statusIcons.get(idx) + " " + PromptOutputStream.DEFAULT_PROMPT;
+			String expectedPrompt = statusIcons.get(idx) + " >>> ";
 			String actualPrompt = splittedLine[1];
 
 			assertEquals(expectedPrompt, actualPrompt);
@@ -140,7 +160,7 @@ class PromptOutputStreamTest {
 	void multiThread() throws IOException {
 		// initialize Output
 		PipedOutputStream outputStream = new PipedOutputStream();
-		PromptOutputStream promptOutputStream = new PromptOutputStream(outputStream, "123> ");
+		PromptOutputStream promptOutputStream = new PromptOutputStream(outputStream).setPrompt("123> ");
 
 		// change default stdout
 		System.setOut(new PrintStream(promptOutputStream, true));
@@ -185,6 +205,7 @@ class PromptOutputStreamTest {
 		for (int i = 0; i < N_TEST_STRINGS * N_THREADS; ++i) {
 			if ((line = reader.readLine()) == null) // check EOF has not been reached
 				break;
+			assert prompt != null;
 			assertFalse(line.contains(prompt)); // check the output does not contain the prompt (meaning
 			// it has been corrupted)
 
@@ -194,6 +215,87 @@ class PromptOutputStreamTest {
 
 			++i;
 		}
+	}
+
+	@Test()
+	@DisplayName("Testing prompt getter and setter")
+	void setPrompt() throws IOException {
+		// initialize Output
+		PipedOutputStream outputStream = new PipedOutputStream();
+		PromptOutputStream promptOutputStream = new PromptOutputStream(outputStream);
+
+		// change default stdout
+		System.setOut(new PrintStream(promptOutputStream, true));
+
+		Thread writerThread = new Thread(() -> {
+			promptOutputStream.setPrompt("1 ");
+			assertEquals("1 ", promptOutputStream.getPrompt());
+			System.out.println("Test");
+
+			promptOutputStream.setPrompt("2 ");
+			assertEquals("2 ", promptOutputStream.getPrompt());
+			System.out.println("Test");
+
+			promptOutputStream.setPrompt("3 ");
+			assertEquals("3 ", promptOutputStream.getPrompt());
+			System.out.println("Test");
+
+			try {
+				outputStream.flush();
+				outputStream.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		});
+		writerThread.start();
+
+		// initialize Input
+		BufferedReader reader = new BufferedReader(new InputStreamReader(new PipedInputStream(outputStream)));
+		assertEquals("Test", reader.readLine());
+		assertEquals("1 ", reader.readLine());
+		assertEquals("Test", reader.readLine());
+		assertEquals("2 ", reader.readLine());
+		assertEquals("Test", reader.readLine());
+		assertEquals("3 ", reader.readLine());
+	}
+
+	@Test()
+	@DisplayName("Testing status icon setter")
+	void setStatusIcon() throws IOException {
+		// initialize Output
+		PipedOutputStream outputStream = new PipedOutputStream();
+		PromptOutputStream promptOutputStream = new PromptOutputStream(outputStream);
+
+		// change default stdout
+		System.setOut(new PrintStream(promptOutputStream, true));
+
+		Thread writerThread = new Thread(() -> {
+			promptOutputStream.setStatusIcon("🙈");
+			System.out.println("Test");
+
+			promptOutputStream.setStatusIcon("🤯");
+			System.out.println("Test");
+
+			promptOutputStream.setStatusIcon("😵");
+			System.out.println("Test");
+
+			try {
+				outputStream.flush();
+				outputStream.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		});
+		writerThread.start();
+
+		// initialize Input
+		BufferedReader reader = new BufferedReader(new InputStreamReader(new PipedInputStream(outputStream)));
+		assertEquals("Test", reader.readLine());
+		assertTrue(reader.readLine().startsWith("🙈"));
+		assertEquals("Test", reader.readLine());
+		assertTrue(reader.readLine().startsWith("🤯"));
+		assertEquals("Test", reader.readLine());
+		assertTrue(reader.readLine().startsWith("😵"));
 	}
 
 	@Test()
@@ -250,7 +352,7 @@ class PromptOutputStreamTest {
 		originalOut.println("With PromptOutputStream and " + N_TEST_STRINGS + " strings, execution took: " + time2 + "ms");
 
 		originalOut.println("Difference is: " + (time2 - time1) + "ms = " + Math.abs(time2 - time1) / 1_000f + "s");
-		Assertions.assertTrue(Math.abs(time2 - time1) / 1_000f <= 2); // time difference should be very low
+		assertTrue(Math.abs(time2 - time1) / 1_000f <= 2); // time difference should be very low
 	}
 
 	@Test()
@@ -291,6 +393,6 @@ class PromptOutputStreamTest {
 		originalOut.println("With PromptOutputStream and " + N_TEST_STRINGS + " strings, execution took: " + time2 + "ms");
 
 		originalOut.println("Difference is: " + (time2 - time1) + "ms = " + Math.abs(time2 - time1) / 1_000f + "s");
-		Assertions.assertTrue(Math.abs(time2 - time1) / 1_000f <= 2); // time difference should be very low
+		assertTrue(Math.abs(time2 - time1) / 1_000f <= 2); // time difference should be very low
 	}
 }

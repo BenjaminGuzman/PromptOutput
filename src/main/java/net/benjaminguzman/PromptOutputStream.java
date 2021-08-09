@@ -1,6 +1,25 @@
+/*
+ * Copyright (c) 2021. Benjamín Antonio Velasco Guzmán
+ * Author: Benjamín Antonio Velasco Guzmán <bg@benjaminguzman.dev>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package net.benjaminguzman;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -34,8 +53,6 @@ import java.nio.charset.StandardCharsets;
  * {@link #printPrompt()}
  */
 public class PromptOutputStream extends OutputStream {
-	public static final String DEFAULT_PROMPT = ">>> ";
-
 	private final OutputStream out;
 
 	/**
@@ -46,7 +63,7 @@ public class PromptOutputStream extends OutputStream {
 	 * >
 	 * $
 	 */
-	private final byte @NotNull [] prompt;
+	private byte @NotNull [] prompt;
 
 	/**
 	 * The status symbol (as bytes) that should be printed
@@ -72,24 +89,17 @@ public class PromptOutputStream extends OutputStream {
 	private boolean should_delete_prompt;
 
 	/**
-	 * Creates a new object with no status icon
+	 * Creates a new object with no status icon and no prompt
 	 *
-	 * @param out    actual output stream where data will be written
-	 * @param prompt prompt to be shown. It is recommended to be a short string. Examples: "$ ", "# "...
-	 */
-	public PromptOutputStream(@NotNull OutputStream out, @NotNull String prompt) {
-		this.out = out;
-		this.prompt = prompt.getBytes(StandardCharsets.UTF_8);
-		this.statusIcon = new byte[0]; // just ensure it is not null
-	}
-
-	/**
-	 * Creates a new object with no status icon and the {@link #DEFAULT_PROMPT}
+	 * In this state, the object is the same as a simple {@link OutputStream} so it is recommended you call
+	 * {@link #setPrompt(String)} or {@link #setStatusIcon(String)}
 	 *
 	 * @param out actual output stream where data will be written
 	 */
 	public PromptOutputStream(@NotNull OutputStream out) {
-		this(out, DEFAULT_PROMPT);
+		this.out = out;
+		this.prompt = new byte[0]; // just ensure it is not null
+		this.statusIcon = new byte[0]; // just ensure it is not null
 	}
 
 	/**
@@ -99,14 +109,21 @@ public class PromptOutputStream extends OutputStream {
 	 * <p>
 	 * This method has the same problem described in {@link #setStatusIcon(String)} method documentation
 	 *
-	 * @param prompt the prompt to be used
+	 * @param prompt the prompt to be used. If null, no prompt will be shown
 	 * @return the same object (so you can use fluent pattern)
 	 */
-	public PromptOutputStream setPrompt(@NotNull String prompt) {
+	public PromptOutputStream setPrompt(@Nullable String prompt) {
+		if (prompt == null) {
+			synchronized (out) {
+				this.prompt = new byte[0];
+			}
+			return this;
+		}
+
 		byte[] promptBytes = prompt.getBytes(StandardCharsets.UTF_8);
 
 		synchronized (out) {
-			statusIcon = promptBytes;
+			this.prompt = promptBytes;
 		}
 
 		return this;
@@ -118,7 +135,7 @@ public class PromptOutputStream extends OutputStream {
 	 * <p>
 	 * It is "likely" to equal, because the bytes are decoded using {@link String} constructor
 	 */
-	@NotNull
+	@Nullable
 	public String getPrompt() {
 		return new String(prompt);
 	}
@@ -152,11 +169,19 @@ public class PromptOutputStream extends OutputStream {
 	 *
 	 * Therefore, you'll need to add extra synchronization or use another method like {@link #printPrompt(String)}
 	 *
-	 * @param icon the emoji to show
+	 * @param icon the emoji to show. If null, no icon will be shown
 	 * @return the same object (so you can use fluent pattern)
 	 * @see #printPrompt(String)
 	 */
-	public PromptOutputStream setStatusIcon(@NotNull String icon) {
+	public PromptOutputStream setStatusIcon(@Nullable String icon) {
+		if (icon == null) {
+			synchronized (out) {
+				statusIcon = new byte[0];
+			}
+
+			return this;
+		}
+
 		if (!icon.endsWith(" "))
 			icon = icon + " ";
 

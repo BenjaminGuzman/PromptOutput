@@ -6,7 +6,7 @@
 
 	<groupId>net.benjaminguzman</groupId>
 	<artifactId>PromptOutput</artifactId>
-	<version>1.0</version>
+	<version>1.1</version>
 	<packaging>jar</packaging>
 
 	<name>${project.groupId}:${project.artifactId}</name>
@@ -111,7 +111,6 @@
 						<configuration>
 							<!-- Read from settings.xml -->
 							<keyname>${gpg.keyname}</keyname>
-							<passphraseServerId>${gpg.keyname}</passphraseServerId>
 						</configuration>
 					</execution>
 				</executions>

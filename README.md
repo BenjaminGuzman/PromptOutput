@@ -100,3 +100,9 @@ Tests include a simple stress test, if you run it, you'll see there is no signif
 custom prompt output and not using it. They both run in about the same time.
 
 Likewise, you shouldn't be worried about memory or CPU consumption.
+
+## License
+
+[MIT license](./LICENSE)
+
+Copyright © 2021 Benjamín Antonio Velasco Guzmán

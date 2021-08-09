@@ -11,7 +11,7 @@
 
 	<name>${project.groupId}:${project.artifactId}</name>
 	<description>
-		Small library to print a prompt (ideally to stdout) after a line was printed.
+		Simple utility class to print a prompt (ideally to stdout) after a line was printed.
 		Intended to be used with application with interactive user input.
 	</description>
 	<url>https://github.com/BenjaminGuzman/PromptOutput</url>

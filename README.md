@@ -13,13 +13,13 @@ Add the maven dependency
 <dependency>
     <groupId>net.benjaminguzman</groupId>
     <artifactId>PromptOutput</artifactId>
-    <version>1.1</version>
+    <version>1.1.1</version>
 </dependency>
 ```
 
 ## Code
 
-To use this class is very easy:
+Usage is very easy:
 
 ```Java
 // initialization

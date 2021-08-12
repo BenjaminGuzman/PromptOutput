@@ -66,6 +66,7 @@ public class PromptOutputStream extends OutputStream {
 	 * The prompt (as bytes) that should be printed
 	 * <p>
 	 * Examples:
+	 * <p>
 	 * >>>
 	 * <p>
 	 * >
@@ -78,6 +79,7 @@ public class PromptOutputStream extends OutputStream {
 	 * The status symbol (as bytes) that should be printed
 	 * <p>
 	 * Examples:
+	 * <p>
 	 * ⏳
 	 * <p>
 	 * ✔
@@ -210,7 +212,11 @@ public class PromptOutputStream extends OutputStream {
 	 * <p>
 	 * This solves the synchronization problem described in {@link #setStatusIcon(String)} method documentation
 	 * <p>
-	 * This method has very similar behaviour to {@link #printPrompt()}
+	 * This method has very similar behaviour to {@link #printPrompt()}, with the difference that it also changes
+	 * the status icon
+	 * <p>
+	 * This is equivalent to calling {@link #setStatusIcon(String)} and {@link #printPrompt(String)} with
+	 * extra synchronization
 	 *
 	 * @return the same object (so you can use fluent pattern)
 	 * @see #printPrompt()

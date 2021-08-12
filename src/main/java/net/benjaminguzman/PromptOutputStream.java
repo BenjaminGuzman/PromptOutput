@@ -67,7 +67,9 @@ public class PromptOutputStream extends OutputStream {
 	 * <p>
 	 * Examples:
 	 * >>>
+	 * <p>
 	 * >
+	 * <p>
 	 * $
 	 */
 	private byte @NotNull [] prompt;
@@ -77,7 +79,9 @@ public class PromptOutputStream extends OutputStream {
 	 * <p>
 	 * Examples:
 	 * ⏳
+	 * <p>
 	 * ✔
+	 * <p>
 	 * ❌
 	 */
 	private byte @NotNull [] statusIcon;
@@ -97,7 +101,7 @@ public class PromptOutputStream extends OutputStream {
 
 	/**
 	 * Creates a new object with no status icon and no prompt
-	 *
+	 * <p>
 	 * In this state, the object is the same as a simple {@link OutputStream} so it is recommended you call
 	 * {@link #setPrompt(String)} or {@link #setStatusIcon(String)}
 	 *
@@ -157,23 +161,23 @@ public class PromptOutputStream extends OutputStream {
 	/**
 	 * Set the "icon" (emoji preferably) to show alongside the prompt.
 	 * If the icon does not end with a space, a space is added
-	 *
+	 * <p>
 	 * This operation does not write to output
-	 *
+	 * <p>
 	 * Even though, this is synchronized, that doesn't mean you won't get unexpected output.
-	 *
+	 * <p>
 	 * Let's say you have 2 threads. One calling {@link #setStatusIcon(String)} and then {@link #write(byte[])}
 	 * (or any write method via println). Suppose the other thread does the same. In such case, the following
 	 * behaviour may result:
-	 *
+	 * <p>
 	 * Thread 1: changes the status icon to 💥
-	 *
+	 * <p>
 	 * Thread 2: changes the status icon to 💀
-	 *
+	 * <p>
 	 * Thread 1: any write method is invoked. Then it prints the icon 💀 (wrong)
-	 *
+	 * <p>
 	 * Thread 2: any write method is invoked. Then it prints the icon 💀 (good)
-	 *
+	 * <p>
 	 * Therefore, you'll need to add extra synchronization or use another method like {@link #printPrompt(String)}
 	 *
 	 * @param icon the emoji to show. If null, no icon will be shown
